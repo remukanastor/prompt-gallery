@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Terminal // Akses Izin Diberikan</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Gaya Kustom untuk Tampilan Terminal (Matrix Style) -->
+    <style>
+        /* Menggunakan font monospace dan warna utama terminal */
+        body {
+            background-color: #000000;
+            color: #39FF14; /* Neon Green */
+            font-family: 'Courier New', Courier, monospace;
+            text-shadow: 0 0 5px rgba(57, 255, 20, 0.8);
+        }
+
+        /* Shadow kustom untuk elemen yang bersinar */
+        .shadow-terminal {
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.6), 0 0 5px rgba(57, 255, 20, 0.4);
+        }
+
+        /* Efek CRT Scanlines */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.8) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            opacity: 0.15; 
+            z-index: 9999;
+        }
+
+        /* Hover effect khusus untuk terminal style */
+        .prompt-card:hover .prompt-image {
+            box-shadow: 0 0 15px rgba(57, 255, 20, 1), 0 0 8px rgba(57, 255, 20, 0.6);
+            border-color: #39FF14;
+        }
+
+        .prompt-card:hover {
+            transform: scale(1.02);
+            border-color: #39FF14;
+        }
+        
+        .modal-open {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header Terminal Style -->
+        <header class="text-left py-4 mb-10 border-b-2 border-dashed border-[#39FF14] animate-pulse">
+            <p class="text-sm">Akses Prompt Terminal 1.0.0</p>
+            <h1 class="text-xl sm:text-3xl font-bold uppercase tracking-widest mt-1">
+                Prompt_Gallery_Archive > List_Prompts
+            </h1>
+            <!-- Keterangan instruksi klik -->
+            <p class="text-xs text-red-500 mt-2">> KLIK GAMBAR UNTUK DECRYPT</p>
+        </header>
+
+        <!-- Galeri Prompt Container -->
+        <div id="prompt-gallery" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Kartu prompt akan dimuat di sini oleh JavaScript -->
+        </div>
+
+        <!-- Load More Button Container -->
+        <div id="load-more-container" class="text-center mt-10">
+            <button id="load-more-button" onclick="loadMorePrompts()" class="text-sm font-bold border-2 border-yellow-500 text-yellow-500 px-6 py-3 hover:bg-yellow-500 hover:text-black transition duration-150 shadow-terminal active:bg-gray-800">
+                [ TAMPILKAN LEBIH BANYAK PROMPT ]
+            </button>
+            <p id="end-of-prompts" class="text-red-500 font-bold hidden mt-4">>> AKHIR DARI ARSIP. TIDAK ADA LAGI DATA.</p>
+        </div>
+        
+        <!-- Footer Terminal Style (Versi Final) -->
+        <footer class="mt-10 pt-4 text-center text-xs border-t-2 border-dashed border-[#39FF14]/50">
+            <div class="flex flex-col items-center px-4 mb-2">
+                <!-- Copyright -->
+                <div class="text-[#39FF14] text-center mb-1">
+                    <p class="font-bold">copyright® 
+                        <a href="https://moonhair.my.id" target="_blank" class="hover:text-white transition duration-150">moonhair.my.id</a> - 2025
+                    </p>
+                </div>
+                <!-- Tagline -->
+                <div class="text-gray-500 italic text-center">
+                    made with 💋 by 
+                    <a href="https://threads.net/@moonhair.ai" target="_blank" class="hover:text-white transition duration-150">@moonhair.ai</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal (Jendela Popup) -->
+    <div id="prompt-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden transition-opacity duration-200 items-center justify-center p-4" onclick="closeModal(event)">
+        <div class="bg-black text-[#39FF14] w-full max-w-lg overflow-hidden border-2 border-[#39FF14] shadow-terminal" onclick="event.stopPropagation()">
+            <!-- Header Modal Terminal -->
+            <div class="p-4 border-b border-[#39FF14]/50 flex justify-between items-center bg-black">
+                <h2 id="modal-title" class="text-lg font-bold uppercase tracking-wider"></h2>
+                <button onclick="closeModal()" class="text-[#39FF14] hover:text-white transition duration-150">
+                    [X] TUTUP
+                </button>
+            </div>
+
+            <!-- Konten Modal -->
+            <div class="p-4 sm:p-6">
+                
+                <!-- Deskripsi Singkat (Preview Prompt) -->
+                <p class="text-sm font-semibold text-red-500 mb-2">> PROMPT_PREVIEW:</p>
+                <div class="bg-black border border-[#39FF14]/80 p-3 mb-4 min-h-[6rem] max-h-40 overflow-y-auto">
+                    <!-- Hanya menampilkan teks pendek di sini -->
+                    <p id="modal-short-text" class="text-xs whitespace-pre-line text-gray-400"></p>
+                </div>
+
+                
+                <!-- Tombol Copy Otomatis -->
+                <button id="copy-button" class="w-full mt-4 flex items-center justify-center px-6 py-3 text-sm font-bold uppercase border-2 border-[#39FF14] text-black bg-[#39FF14] hover:bg-black hover:text-[#39FF14] transition duration-150 shadow-terminal active:bg-gray-800">
+                    <span class="mr-2">[ SALIN_PROMPT_OTOMATIS ]</span>
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"></path><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 1 1 0 01-1-1H9a1 1 0 110 2h1a1 1 0 110 2H6zm2-1a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"></path></svg>
+                </button>
+                
+                <!-- Status Salin -->
+                <p id="copy-status" class="text-center text-sm mt-3 text-yellow-500 font-bold opacity-0 transition duration-300">
+                    
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        
+        // Data koleksi prompt dikembalikan ke Hardcoded Data
+        // --- DATA DI SINI DI DUPLIKASI HINGGA 18 ITEM UNTUK DEMO PAGINATION ---
+        const basePrompts = [
+            // 6 Prompt Awal
+            { id: "prompt_001", title: "FILE_001.FANTASY_EPIC.TXT", imageUrl: "https://image.pollinations.ai/prompt/A%20floating%20castle%20in%20the%20sky%20surrounded%20by%20purple%20clouds%20and%20crystal%20waterfall%20rivers.%20Digital%20painting,%208K", shortText: "Sebuah istana melayang di langit, dikelilingi oleh awan ungu dan sungai air terjun kristal. Gaya lukisan digital, resolusi 8K, pencahayaan dramatis, komposisi sinematik, karya oleh Greg Rutkowski dan Beksinski.", fullPrompt: "Buatlah gambar pemandangan fantasi epik. Sebuah istana melayang di langit, dikelilingi oleh awan ungu dan sungai air terjun kristal. Di kejauhan terlihat gunung-gunung tajam dengan puncak bersalju. Gaya lukisan digital, resolusi 8K, pencahayaan dramatis, komposisi sinematik, karya oleh Greg Rutkowski dan Beksinski." },
+            { id: "prompt_002", title: "FILE_002.PRODUCT_MINIMAL.TXT", imageUrl: "https://image.pollinations.ai/prompt/Minimalist%20studio%20photo%20of%20a%20cosmetic%20serum%20bottle%20with%20a%20wooden%20cap.%20Clean%20white%20background,%20sharp%20focus%20on%20the%20bottle.%20Soft%20lighting", shortText: "Foto studio minimalis untuk botol serum kosmetik dengan tutup kayu. Latar belakang putih bersih dengan bayangan lembut. Fokus tajam pada botol (depth of field rendah).", fullPrompt: "Foto studio minimalis untuk botol serum kosmetik dengan tutup kayu. Latar belakang putih bersih dengan bayangan lembut. Fokus tajam pada botol (depth of field rendah). Pencahayaan lembut dari samping. Format iklan, resolusi tinggi, 4K." },
+            { id: "prompt_003", title: "FILE_003.ESPORT_MASCOT.TXT", imageUrl: "https://image.pollinations.ai/prompt/Esports%20mascot%20logo%20for%20'Garuda%20Api'%20team.%20Angry%20garuda%20eagle%20with%20flaming%20wings%20and%20glowing%20red%20eyes.%20Futuristic%20and%20aggressive%20design,%20red,%20gold,%20black", shortText: "Desain logo maskot untuk tim e-sport 'Garuda Api'. Menggambarkan seekor elang garuda yang sedang marah dengan sayap menyala, mata merah menyala. Gaya desain futuristik dan agresif, warna dominan merah, emas, dan hitam.", fullPrompt: "Desain logo maskot untuk tim e-sport 'Garuda Api'. Menggambarkan seekor elang garuda yang sedang marah dengan sayap menyala, mata merah menyala. Gaya desain futuristik dan agresif, warna dominan merah, emas, dan hitam. Vektor, detail tinggi, latar belakang transparan." },
+            { id: "prompt_004", title: "FILE_004.CYBERPUNK_RAIN.TXT", imageUrl: "https://image.pollinations.ai/prompt/Tokyo%20street%20scene%20at%20night%20with%20heavy%20rain,%20reflecting%20neon%20signs,%20and%20a%20blue-haired%20female%20character%20holding%20a%20transparent%20umbrella.%20Cyberpunk%20style,%20moody%20lighting,%208K", shortText: "Pemandangan jalanan Tokyo di malam hari dengan hujan deras, papan iklan neon yang memantul di genangan air, dan karakter wanita berambut biru mengenakan jaket kulit, memegang payung transparan. Gaya cyberpunk.", fullPrompt: "Pemandangan jalanan Tokyo di malam hari dengan hujan deras, papan iklan neon yang memantul di genangan air, dan karakter wanita berambut biru mengenakan jaket kulit, memegang payung transparan. Gaya cyberpunk, pencahayaan moody, 8K, detail rinci, sinematik." },
+            { id: "prompt_005", title: "FILE_005.CLASSIC_PORTRAIT.TXT", imageUrl: "https://image.pollinations.ai/prompt/Portrait%20of%20a%20young%20woman%20in%20a%20classic%20oil%20painting%20style%20like%20the%20Renaissance.%20Calm%20expression,%20dramatic%20lighting%20from%20above%20(chiaroscuro).%20Soft%20color%20palette", shortText: "Potret seorang wanita muda dengan gaya lukisan cat minyak klasik seperti Renaissance. Ekspresi tenang, cahaya dramatis dari atas (chiaroscuro). Menggunakan palet warna lembut dan tekstur kuas yang terlihat jelas.", fullPrompt: "Potret seorang wanita muda dengan gaya lukisan cat minyak klasik seperti Renaissance. Ekspresi tenang, cahaya dramatis dari atas (chiaroscuro). Menggunakan palet warna lembut dan tekstur kuas yang terlihat jelas. Karya oleh Leonardo da Vinci dan Rembrandt, 4K." },
+            { id: "prompt_006", title: "FILE_006.MACRO_FLOWER.TXT", imageUrl: "https://image.pollinations.ai/prompt/Macro%20close-up%20photography%20of%20dewdrops%20on%20red%20rose%20petals.%20Extremely%20blurred%20bokeh%20background.%20Soft%20morning%20natural%20lighting", shortText: "Fotografi makro close-up tetesan embun pada kelopak bunga mawar merah yang mekar. Latar belakang bokeh yang sangat blur (shallow depth of field). Pencahayaan alami pagi hari yang lembut.", fullPrompt: "Fotografi makro close-up tetesan embun pada kelopak bunga mawar merah yang mekar. Latar belakang bokeh yang sangat blur (shallow depth of field). Pencahayaan alami pagi hari yang lembut. Detail resolusi tinggi, kualitas fotografi profesional, 100mm f/2.8." },
+        ];
+
+        // Duplikasi untuk simulasi data banyak (total 18 item)
+        const prompts = [
+            ...basePrompts,
+            ...basePrompts.map((p, i) => ({ ...p, id: `prompt_00${i+7}`, title: `DUPLIKAT_${p.title}` })),
+            ...basePrompts.map((p, i) => ({ ...p, id: `prompt_00${i+13}`, title: `DUPLIKAT_2_${p.title}` })),
+        ];
+        // --- END OF DATA ---
+
+
+        // --- PAGING VARIABLES ---
+        const PROMPTS_PER_LOAD = 12; // Jumlah prompt yang dimuat setiap kali klik
+        let currentPromptIndex = 0;
+        
+        let currentPromptId = null;
+
+        // --- Variabel DOM ---
+        const gallery = document.getElementById('prompt-gallery');
+        const modal = document.getElementById('prompt-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalShortText = document.getElementById('modal-short-text');
+        const copyButton = document.getElementById('copy-button'); 
+        const copyStatus = document.getElementById('copy-status');
+        const loadMoreButton = document.getElementById('load-more-button');
+        const endOfPromptsMessage = document.getElementById('end-of-prompts');
+
+
+        // --- CORE FUNCTIONS ---
+        
+        // Fungsi utama untuk memuat prompt secara bertahap
+        window.loadMorePrompts = () => {
+            if (!gallery) return;
+
+            const nextIndex = currentPromptIndex + PROMPTS_PER_LOAD;
+            const promptsToRender = prompts.slice(currentPromptIndex, nextIndex);
+
+            if (promptsToRender.length === 0) {
+                // Sembunyikan tombol jika sudah mencapai akhir
+                loadMoreButton.classList.add('hidden');
+                endOfPromptsMessage.classList.remove('hidden');
+                return;
+            }
+
+            promptsToRender.forEach(prompt => {
+                const card = document.createElement('div');
+                card.className = "prompt-card bg-black/50 text-[#39FF14] overflow-hidden border border-[#39FF14]/50 transition-all duration-150 cursor-pointer shadow-terminal";
+                card.setAttribute('data-id', prompt.id);
+                card.onclick = () => openModal(prompt.id);
+
+                card.innerHTML = `
+                    <div class="relative w-full h-48 sm:h-56 lg:h-48 overflow-hidden border-b border-[#39FF14]/50">
+                        <img src="${prompt.imageUrl}" alt="Contoh hasil prompt untuk ${prompt.title}" onerror="this.onerror=null;this.src='https://placehold.co/600x400/39FF14/000?text=IMG_ERROR'" 
+                             class="prompt-image w-full h-full object-cover transition-all duration-150 border border-transparent">
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-sm font-semibold mb-1 truncate text-white">${prompt.title}</h3>
+                        <div class="flex justify-between items-center mt-2">
+                             <p class="text-xs text-[#39FF14]">> KLIK GAMBAR UNTUK DECRYPT</p>
+                        </div>
+                    </div>
+                `;
+                gallery.appendChild(card);
+            });
+
+            // Update index untuk pemuatan berikutnya
+            currentPromptIndex = nextIndex;
+
+            // Cek jika sudah di akhir data
+            if (currentPromptIndex >= prompts.length) {
+                loadMoreButton.classList.add('hidden');
+                endOfPromptsMessage.classList.remove('hidden');
+            } else {
+                 loadMoreButton.classList.remove('hidden');
+                 endOfPromptsMessage.classList.add('hidden');
+            }
+        }
+
+
+        function openModal(id) {
+            const prompt = prompts.find(p => p.id === id);
+            if (!prompt) return;
+            
+            currentPromptId = id; 
+
+            modalTitle.textContent = prompt.title;
+            modalShortText.textContent = prompt.shortText; 
+            
+            // Atur ulang status salin
+            copyStatus.classList.add('opacity-0'); 
+            copyStatus.classList.remove('text-green-400', 'text-yellow-500', 'animate-pulse');
+            
+            // Tampilkan modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.classList.add('modal-open');
+        }
+
+        function closeModal(event) {
+            // Logika untuk memastikan hanya klik di background atau tombol [X] yang menutup modal
+            if (event && event.target !== event.currentTarget && event.target.tagName !== 'BUTTON') {
+                 return; 
+            }
+            currentPromptId = null; 
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        }
+
+        // --- FUNGSI COPY OTOMATIS DARI DATA JAVASCRIPT ---
+        
+        function copyPromptToClipboard() {
+            if (!currentPromptId) return;
+
+            const prompt = prompts.find(p => p.id === currentPromptId);
+            if (!prompt) return;
+
+            const promptText = prompt.fullPrompt;
+            let success = false;
+            
+            // Menggunakan elemen sementara (temporary textarea) untuk memaksa copy
+            const tempInput = document.createElement('textarea');
+            tempInput.value = promptText;
+            tempInput.style.position = 'absolute';
+            tempInput.style.left = '-9999px'; 
+            document.body.appendChild(tempInput);
+
+            // Coba salin
+            tempInput.select(); 
+            try {
+                success = document.execCommand('copy');
+            } catch (err) {
+                console.error('Programmatic copy failed:', err);
+                success = false;
+            }
+            
+            document.body.removeChild(tempInput);
+
+            // Berikan feedback
+            if (success) {
+                copyStatus.textContent = '>> COPY SUKSES! PROMPT TERSALIN DI CLIPBOARD.';
+                copyStatus.classList.remove('opacity-0', 'text-yellow-500', 'animate-pulse');
+                copyStatus.classList.add('text-green-400');
+            } else {
+                // FALLBACK JIKA DIBLOKIR
+                copyStatus.textContent = '>> AKSES DITOLAK. SILAKAN LAKUKAN SALIN MANUAL (CTRL+C / CMD+C)!';
+                copyStatus.classList.remove('opacity-0', 'text-green-400');
+                copyStatus.classList.add('text-yellow-500', 'animate-pulse');
+            }
+
+            // Sembunyikan feedback setelah 4 detik
+            setTimeout(() => {
+                copyStatus.classList.add('opacity-0');
+                copyStatus.classList.remove('animate-pulse');
+            }, 4000);
+        }
+
+        // --- Inisialisasi Aplikasi ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Memuat 12 prompt pertama saat halaman dimuat
+            loadMorePrompts(); 
+            
+            copyButton.addEventListener('click', copyPromptToClipboard);
+
+            // Menutup modal dengan tombol ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('flex')) {
+                    closeModal();
+                }
+            });
+        });
+        
+        // --- Memperbaiki Bug Scope ---
+        window.closeModal = closeModal;
+        window.loadMorePrompts = loadMorePrompts; // Export for onclick handler
+    </script>
+</body>
+</html>
